@@ -1,0 +1,90 @@
+//############################## modular.lib ######################################
+// This library contains a collection of modular synthesis modules.  
+// Its official prefix is `mo`.
+//#################################################################################
+
+declare name "Faust Modular Synthesis Library";
+declare version "0.0.1";
+
+pl = library("platform.lib");
+ma = library("maths.lib");
+ba = library("basics.lib");
+fi = library("filters.lib");
+si = library("signals.lib");
+
+
+//################################### bpm #########################################
+// bpm(n): Beat generator n
+//#################################################################################
+
+bpm(n) = vgroup("bpm %n", (1-pause) * beat(speed, length)
+    with {
+		pause = vslider("[2]pause[style:knob]",0,0,1,1);
+		freq = vslider("[1]speed[style:knob][unit:bpm][scale:log]", 60, 6, 1200, 1)/60;
+		length= vslider("phase[style:knob][unit:%]",10,0,99,1)/100;
+        phasor(f) = f/ma.SR : (+,1:fmod)~_;
+        start = _ <: mem,_ : >;
+        beat = phasor(freq) <: start | <(length);
+    });
+
+
+//################################### adsr ########################################
+// adsr(n): Envelop generator n
+//#################################################################################
+
+adsr(n) = vgroup("adsr %n", en.adsr(a,r,s,r),_ : * 
+with {
+    a = vslider("A[1][style:knob][scale:log][unit:ms]", 10, 1, 2000, 0.1)/1000;
+    s = vslider("S[2][style:knob][unit:%]", 90, 1, 100, 1)/100;
+    r = vslider("R[3][style:knob][scale:log][unit:ms]", 10, 1, 2000, 1)/1000;
+});
+
+
+//#################################### lfo ########################################
+// lfo(n): low frequency oscillator n
+//#################################################################################
+
+lfo(n) = hgroup("lfo %n",  osc(freq) : *(gain) : +(1)) 
+    with {
+        // user interface
+        freq = vslider("freq[style:knob][unit:Hz][scale:log]", 1, 0.1, 40, 0.1);
+        gain = vslider("gain[style:knob]", 0, 0, 1, 0.01);
+        // sinewave oscillator
+        osc(f) = f/ma.SR : (+,1:fmod) ~ _ : *(2*ma.PI) : sin;
+    };
+
+
+
+//#################################### vco ########################################
+// vco(n): multi wave oscillator n
+//#################################################################################
+
+vco(n) = vgroup("VCO %n",  phasor(freq) <: 	phasor2osc, 
+                    						phasor2tri, 
+                    						phasor2sawtooth, 
+                    						phasor2square 
+                  						: interpolator(4, wave)
+                  						: *(gain)
+			with {
+				phasor(f) = f/ma.SR : (+,1:fmod) ~ _;
+
+				// phasor transformations
+				normalize  = *(2) : -(1);
+				phasor2osc = *(2*ma.PI) : sin;
+				phasor2sawtooth = normalize;
+				phasor2square = >(0.5) : normalize;
+				phasor2tri = -(0.5) : abs : *(2) : normalize;
+
+				// user interface
+				freq = vslider("freq[style:knob][unit:Hz][scale:log]", 440, 40, 8000, 1);
+				gain = vslider("gain[style:knob]", 0, 0, 1, 0.01);
+				wave = vslider("wave[style:knob]", 1, 1, 4, 0.01);
+
+				// interpolation between N signals
+				interpolator(N,sel) = par(i, N, *(ctrl(i+1))) :> _ 
+					with {
+						// le signal de control est à 1 quand sel == e
+						ctrl(e) = 1 - min(1, abs(e - sel));
+					};
+			}
+		);
