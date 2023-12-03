@@ -11,13 +11,15 @@ ma = library("maths.lib");
 ba = library("basics.lib");
 fi = library("filters.lib");
 si = library("signals.lib");
+en = library("envelopes.lib");
+
 
 
 //################################### bpm #########################################
 // bpm(n): Beat generator n
 //#################################################################################
 
-bpm(n) = vgroup("bpm %n", (1-pause) * beat(speed, length)
+bpm(n) = vgroup("bpm %n", (1-pause) * beat
     with {
 		pause = vslider("[2]pause[style:knob]",0,0,1,1);
 		freq = vslider("[1]speed[style:knob][unit:bpm][scale:log]", 60, 6, 1200, 1)/60;
@@ -59,10 +61,10 @@ lfo(n) = hgroup("lfo %n",  osc(freq) : *(gain) : +(1))
 // vco(n): multi wave oscillator n
 //#################################################################################
 
-vco(n) = vgroup("VCO %n",  phasor(freq) <: 	phasor2osc, 
+vco(n) = vgroup("vco %n",  phasor(freq) <: phasor2osc, 
                     						phasor2tri, 
                     						phasor2sawtooth, 
-                    						phasor2square 
+                    						phasor2square
                   						: interpolator(4, wave)
                   						: *(gain)
 			with {
@@ -78,7 +80,7 @@ vco(n) = vgroup("VCO %n",  phasor(freq) <: 	phasor2osc,
 				// user interface
 				freq = vslider("freq[style:knob][unit:Hz][scale:log]", 440, 40, 8000, 1);
 				gain = vslider("gain[style:knob]", 0, 0, 1, 0.01);
-				wave = vslider("wave[style:knob]", 1, 1, 4, 0.01);
+				wave = vslider("wave[style:knob]", 1, 1, 4, 0.1);
 
 				// interpolation between N signals
 				interpolator(N,sel) = par(i, N, *(ctrl(i+1))) :> _ 
