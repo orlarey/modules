@@ -90,3 +90,45 @@ vco(n) = vgroup("vco %n",  phasor(freq) <: phasor2osc,
 					};
 			}
 		);
+
+
+
+//#################################### clk ########################################
+// clk(n): clock generator n
+//#################################################################################
+
+clock(n) = vgroup("clk %n",
+	pulse(period,width,run)
+	with {
+		// UI
+		period = vslider("period[unit:ms][style:knob][scale:log]", 250, 8, 10000,1)*ma.SR/1000 : max(2);
+		width = vslider("width[style:knob]", 50, 1, 99, 1)/100;
+		run = checkbox("run");
+		led = vbargraph("ON[style:led]",0,1);
+		
+		// Implementation
+		pulse(p,w,r) = phasor(p,r) > (1-w);
+		phasor(p,r) = 1/p : (+,1:fmod:*(r)) ~ _;
+	}
+);
+
+
+
+//################################## euclidian ####################################
+// euclidian(n): euclidian rythm generator n (requires ondemand)
+//#################################################################################
+
+
+euclidian(n) = vgroup("eury %n", er(pulses,steps) 
+	with {
+		// UI: pulses < steps
+		steps = vslider("steps[style:knob]", 16, 2, 16, 1)+0.5:int;
+		pulses = vslider("pulses[style:knob]", 1, 1, 16, 1)+0.5:int : min(steps-1);
+
+		// Implementation
+		er(B,P,C) = C * ondemand((+(1):%(P))~_:*(B):%(P): decr)(upfront(C)); 
+		decr(x) = x < x';
+		upfront(x) = x > x';
+
+	}
+);
