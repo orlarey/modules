@@ -16,6 +16,7 @@ no = library("noises.lib");
 
 
 
+
 //################################### bpm #########################################
 // bpm(n): Beat generator n
 //#################################################################################
@@ -35,7 +36,7 @@ bpm(n) = vgroup("bpm %n", (1-pause) * beat
 // adsr(n): Envelop generator n
 //#################################################################################
 
-adsr(n) = vgroup("adsr %n", en.adsr(a,r,s,r),_ : * 
+adsr(n) = vgroup("adsr %n", en.adsr(a,r,s,r)
 with {
     a = vslider("A[1][style:knob][scale:log][unit:ms]", 10, 1, 2000, 0.1)/1000;
     s = vslider("S[2][style:knob][unit:%]", 90, 1, 100, 1)/100;
@@ -134,17 +135,17 @@ euclidian(n) = vgroup("eury %n", er(pulses,steps)
 	}
 );
 
+
 //################################## noise ####################################
 // colored noise generator
 //#################################################################################
 
-noise(n) = vgroup("noise %n", colored_noise(3,alpha)*gain
+noise(n) = vgroup("noise %n", no.colored_noise(3,alpha)*gain
 	with {
-		alpha = vslider("color", 0, -1, 1, 0.01);
-		gain = vslider("gain", 0, 0, 1, 0.01);
+		alpha = vslider("color[style:knob]", 0, -1, 1, 0.01);
+		gain = vslider("gain[style:knob]", 0, 0, 1, 0.01);
 	}
 );
-
 
 //################################## vcf ####################################
 // vcf
