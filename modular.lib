@@ -47,24 +47,20 @@ with {
 
 
 //#################################### lfo ########################################
-// lfo(n): A LFO is a low frequency oscillator between 0 and 1
+// lfo(n): A LFO is a low frequency oscillator between 0 and 1 with midpoint 0.5
+// when the gain is 0
 //#################################################################################
 
-lfo(n) = vgroup("lfo %n",  phasor(freq) <: phasor2osc, 
-                    						phasor2tri, 
-                    						phasor2sawtooth, 
-                    						phasor2square
-                  						: interpolator(4, wave)
-                  						: *(gain)
+lfo(n) = vgroup("lfo %n",  osc(freq), tri(freq), saw(freq), square(freq)
+                  		 : interpolator(4, wave)
 			with {
 				phasor(f) = f/ma.SR : (+,1:fmod) ~ _;
 
 				// phasor transformations
-				normalize  = *(2) : -(1);
-				phasor2osc = *(2*ma.PI) : sin : +(1) : *(0.5);
-				phasor2sawtooth = _;
-				phasor2square = >(0.5);
-				phasor2tri = -(0.5) : abs : *(2) ;
+				osc(freq) = phasor(freq)*2*ma.PI : sin : *(gain) : *(0.5) : +(0.5);
+				tri(freq) = phasor(freq) - 0.5 : abs : -(0.25) : *(2) : *(gain) : +(0.5);
+				saw(freq) = phasor(freq) - 0.5 : *(gain) : +(0.5);
+				square(freq) = phasor(freq) > 0.5 : -(0.5) : *(gain) : +(0.5);
 
 				// user interface
 				freq = vslider("freq[style:knob][unit:Hz][scale:log]", 1, 0.1, 40, 0.1);
