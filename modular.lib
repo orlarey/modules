@@ -44,26 +44,12 @@ with {
 });
 
 
+
 //#################################### lfo ########################################
-// lfo(n): low frequency oscillator n
+// lfo(n): A LFO is a low frequency oscillator between 0 and 1
 //#################################################################################
 
-lfo(n) = hgroup("lfo %n",  osc(freq) : *(gain) : +(1)) 
-    with {
-        // user interface
-        freq = vslider("freq[style:knob][unit:Hz][scale:log]", 1, 0.1, 40, 0.1);
-        gain = vslider("gain[style:knob]", 0, 0, 1, 0.01);
-        // sinewave oscillator
-        osc(f) = f/ma.SR : (+,1:fmod) ~ _ : *(2*ma.PI) : sin;
-    };
-
-
-
-//#################################### vco ########################################
-// vco(n): multi wave oscillator n
-//#################################################################################
-
-vco(n) = vgroup("vco %n",  phasor(freq) <: phasor2osc, 
+lfo(n) = vgroup("lfo %n",  phasor(freq) <: phasor2osc, 
                     						phasor2tri, 
                     						phasor2sawtooth, 
                     						phasor2square
@@ -74,15 +60,15 @@ vco(n) = vgroup("vco %n",  phasor(freq) <: phasor2osc,
 
 				// phasor transformations
 				normalize  = *(2) : -(1);
-				phasor2osc = *(2*ma.PI) : sin;
-				phasor2sawtooth = normalize;
-				phasor2square = >(0.5) : normalize;
-				phasor2tri = -(0.5) : abs : *(2) : normalize;
+				phasor2osc = *(2*ma.PI) : sin : +(1) : *(0.5);
+				phasor2sawtooth = _;
+				phasor2square = >(0.5);
+				phasor2tri = -(0.5) : abs : *(2) ;
 
 				// user interface
-				freq = vslider("freq[style:knob][unit:Hz][scale:log]", 440, 40, 8000, 1);
+				freq = vslider("freq[style:knob][unit:Hz][scale:log]", 1, 0.1, 40, 0.1);
 				gain = vslider("gain[style:knob]", 0, 0, 1, 0.01);
-				wave = vslider("wave[style:knob]", 1, 1, 4, 0.1);
+				wave = vslider("wave[style:knob]", 1, 1, 4, 1)+0.5:int;
 
 				// interpolation between N signals
 				interpolator(N,sel) = par(i, N, *(ctrl(i+1))) :> _ 
@@ -94,6 +80,32 @@ vco(n) = vgroup("vco %n",  phasor(freq) <: phasor2osc,
 		);
 
 
+
+//#################################### vco ########################################
+// vco(n): multi wave vco n
+//#################################################################################
+
+vco(n) = vgroup("vco %n",  os.osc(freq), 
+                    		os.triangle(freq), 
+                    		os.sawtooth(freq), 
+                            os.square(freq)
+                  		: interpolator(4, wave)
+                  		: *(gain)
+			with {
+
+				// user interface
+				freq = vslider("freq[style:knob][unit:Hz][scale:log]", 440, 40, 8000, 1);
+				gain = vslider("gain[style:knob]", 0, 0, 1, 0.01);
+				wave = vslider("wave[style:knob]", 1, 1, 4, 1)+0.5:int;
+
+				// interpolation between N signals
+				interpolator(N,sel) = par(i, N, *(ctrl(i+1))) :> _ 
+					with {
+						// le signal de control est à 1 quand sel == e
+						ctrl(e) = 1 - min(1, abs(e - sel));
+					};
+			}
+		);
 
 //#################################### clk ########################################
 // clk(n): clock generator n
