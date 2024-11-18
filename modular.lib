@@ -46,6 +46,25 @@ with {
 
 
 
+//################################### adsr ########################################
+// ear(n): Exponential Attack Release envelop generator n
+//#################################################################################
+
+ear(n) = vgroup("ear %n", are(curv,natt,nrel)
+with {
+	are(cu,na,nr) = upfront : \(mode,vc,trig).((trig>0) | (mode == 1) & (vc<(1-cu)), vc + (mode==1)*a*(1-vc) - (mode==0)*r*vc) ~(_,_) : !,_ : -(cu) : max(0) : /(1-2*cu) 
+    with { 
+		upfront(x) = x>x'; 
+        a=t2a(natt,cu);  
+        r=t2a(nrel,cu); 
+        t2a(n,s) = 1 - s^(1/(n+1));
+    };
+    curv = vslider("[1]F[style:knob][tooltip:increase the flatness of the curves]", 3, 1, 10, 0.1)/100; // Curvature of attack and release
+    natt = vslider("[2]A[style:knob][unit:ms][tooltip:attack time in ms]", 3, 1, 50, 0.1)*ma.SR/1000:int;
+    nrel = vslider("[3]R[style:knob][unit:ms][tooltip:release time in ms]", 15, 1, 1000, 0.1)*ma.SR/1000:int;
+});
+
+
 //#################################### lfo ########################################
 // lfo(n): A LFO is a low frequency oscillator between 0 and 1 with midpoint 0.5
 // when the gain is 0
