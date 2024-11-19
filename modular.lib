@@ -4,6 +4,7 @@
 //#################################################################################
 
 declare name "Faust Modular Synthesis Library";
+declare author "Yann Orlarey";
 declare version "0.0.1";
 
 pl = library("platform.lib");
@@ -14,6 +15,7 @@ si = library("signals.lib");
 en = library("envelopes.lib");
 no = library("noises.lib");
 os = library("oscillators.lib");
+ef = library("misceffects.lib");
 
 
 
@@ -22,11 +24,11 @@ os = library("oscillators.lib");
 // bpm(n): Beat generator n
 //#################################################################################
 
-bpm(n) = vgroup("bpm %n", (1-pause) * beat
+bpm(n) = vgroup("%n.BPM", (1-pause) * beat
     with {
 		pause = vslider("[2]pause[style:knob]",0,0,1,1);
-		freq = vslider("[1]speed[style:knob][unit:bpm][scale:log]", 60, 6, 1200, 1)/60;
-		length= vslider("phase[style:knob][unit:%]",10,0,99,1)/100;
+		freq = vslider("[1]bpm[style:knob][unit:bpm][scale:log]", 60, 6, 1200, 1)/60;
+		length= vslider("width[style:knob][unit:%]",10,0,99,1)/100;
         phasor(f) = f/ma.SR : (+,1:fmod)~_;
         start = _ <: mem,_ : >;
         beat = phasor(freq) <: start | <(length);
@@ -37,7 +39,7 @@ bpm(n) = vgroup("bpm %n", (1-pause) * beat
 // adsr(n): Envelop generator n
 //#################################################################################
 
-adsr(n) = vgroup("adsr %n", en.adsr(a,r,s,r)
+adsr(n) = vgroup("%n.ADSR", en.adsr(a,r,s,r)
 with {
     a = vslider("A[1][style:knob][scale:log][unit:ms]", 10, 1, 2000, 0.1)/1000;
     s = vslider("S[2][style:knob][unit:%]", 90, 1, 100, 1)/100;
@@ -50,7 +52,7 @@ with {
 // ear(n): Exponential Attack Release envelop generator n
 //#################################################################################
 
-ear(n) = vgroup("ear %n", are(curv,natt,nrel)
+ear(n) = vgroup("%n.XAR", are(curv,natt,nrel)
 with {
 	are(cu,na,nr) = upfront : \(mode,vc,trig).((trig>0) | (mode == 1) & (vc<(1-cu)), vc + (mode==1)*a*(1-vc) - (mode==0)*r*vc) ~(_,_) : !,_ : -(cu) : max(0) : /(1-2*cu) 
     with { 
@@ -66,25 +68,26 @@ with {
 
 
 //#################################### lfo ########################################
-// lfo(n): A LFO is a low frequency oscillator between 0 and 1 with midpoint 0.5
-// when the gain is 0
+// lfo(n): A LFO is a low frequency oscillator between -1 and 1 with midpoint 0
 //#################################################################################
 
-lfo(n) = vgroup("lfo %n",  osc(freq), tri(freq), saw(freq), square(freq)
-                  		 : interpolator(4, wave)
+lfo(n) = vgroup("%n.LFO",  osc(freq), tri(freq), saw(freq), square(freq), dirac(freq)
+                  		 : interpolator(5, wave) : *(gain)
 			with {
 				phasor(f) = f/ma.SR : (+,1:fmod) ~ _;
 
 				// phasor transformations
-				osc(freq) = phasor(freq)*2*ma.PI : sin : *(gain) : *(0.5) : +(0.5);
-				tri(freq) = phasor(freq) - 0.5 : abs : -(0.25) : *(2) : *(gain) : +(0.5);
-				saw(freq) = phasor(freq) - 0.5 : *(gain) : +(0.5);
-				square(freq) = phasor(freq) > 0.5 : -(0.5) : *(gain) : +(0.5);
+				osc(freq) = phasor(freq)*2*ma.PI : sin;
+				tri(freq) = phasor(freq) - 0.5 : abs : -(0.25) : *(4);
+				saw(freq) = phasor(freq) - 0.5 : *(2);
+				square(freq) = phasor(freq) < width : -(0.5) : *(2);
+				dirac(freq) = (phasor(freq) == 0) | (phasor(freq) < phasor(freq)');
 
 				// user interface
-				freq = vslider("freq[style:knob][unit:Hz][scale:log]", 1, 0.1, 40, 0.1);
+				freq = vslider("freq[style:knob][unit:Hz][scale:log]", 1, 0.1, 160, 0.1);
 				gain = vslider("gain[style:knob]", 0, 0, 1, 0.01);
-				wave = vslider("wave[style:knob]", 1, 1, 4, 1)+0.5:int;
+				wave = vslider("wave[style:knob]", 1, 1, 5, 1)+0.5:int;
+				width = vslider("width[style:knob]", 50, 1, 99, 1)/100;
 
 				// interpolation between N signals
 				interpolator(N,sel) = par(i, N, *(ctrl(i+1))) :> _ 
@@ -96,12 +99,11 @@ lfo(n) = vgroup("lfo %n",  osc(freq), tri(freq), saw(freq), square(freq)
 		);
 
 
-
 //#################################### vco ########################################
 // vco(n): multi wave vco n
 //#################################################################################
 
-vco(n) = vgroup("vco %n",  os.osc(freq), 
+vco(n) = vgroup("%n.VCO",  os.osc(freq), 
                     		os.triangle(freq), 
                     		os.sawtooth(freq), 
                             os.square(freq)
@@ -127,7 +129,7 @@ vco(n) = vgroup("vco %n",  os.osc(freq),
 // clk(n): clock generator n
 //#################################################################################
 
-clock(n) = vgroup("clk %n",
+clock(n) = vgroup("%n.CLOCK",
 	pulse(period,width,run)
 	with {
 		// UI
@@ -149,7 +151,7 @@ clock(n) = vgroup("clk %n",
 //#################################################################################
 
 
-euclidian(n) = vgroup("eury %n", er(pulses,steps) 
+euclidian(n) = vgroup("%n.EUCLID", er(pulses,steps) 
 	with {
 		// UI: pulses < steps
 		steps = vslider("steps[style:knob]", 16, 2, 16, 1)+0.5:int;
@@ -168,7 +170,7 @@ euclidian(n) = vgroup("eury %n", er(pulses,steps)
 // colored noise generator
 //#################################################################################
 
-noise(n) = vgroup("noise %n", no.colored_noise(3,alpha)*gain
+noise(n) = vgroup("%n.NOISE", no.colored_noise(3,alpha)*gain
 	with {
 		alpha = vslider("color[style:knob]", 0, -1, 1, 0.01);
 		gain = vslider("gain[style:knob]", 0, 0, 1, 0.01);
@@ -179,10 +181,49 @@ noise(n) = vgroup("noise %n", no.colored_noise(3,alpha)*gain
 // vcf
 //#################################################################################
 
-vcf(n) = vgroup("vcf %n", fi.resonlp(fc,Q,gain)
+vcf(n) = vgroup("%n.VCF", fi.resonlp(fc,Q,gain)
 with {
-    fc = vslider("freq[style:knob][unit:Hz][scale:log]", 440, 20, 20000, 1);
+    fc = vslider("freq[style:knob][unit:Hz][scale:log]", 440, 10, 20000, 1);
     Q = vslider("q[style:knob]", 1, 0.5, 10, 0.5);
     gain = vslider("gain[style:knob]", 0, 0, 1, 0.1);
 
 });
+
+//################################## echo ####################################
+// echo
+//#################################################################################
+
+echo(n) = vgroup("%n.ECHO", block(0.9) : ef.echo(1, dur, fback)
+with {
+    dur = vslider("dur[style:knob][scale:log]", 250, 1, 999, 0.1)/1000 : si.smooth(0.9999);
+    fback = vslider("feedback[style:knob]", 0.1, 0, 1, 0.01);
+	block(th) = *(min(1, (1-fback)/(1-th))); // progressively block the input
+});
+
+
+//################################## pan ####################################
+// pan
+//#################################################################################
+
+pan(n) = vgroup("%n.PAN", _ <: *(sqrt(1-p)), *(sqrt(p)) 
+with {
+    p = vslider("pan[style:knob]", 50, 0.1, 99.9, 0.1)/100;
+});
+
+
+//################################## autoppan ####################################
+// autopan
+//#################################################################################
+
+autopan(n) = vgroup("%n.APAN",  ["pan":mod -> pan(0)](["wave":1, "width":1 -> lfo(0)]));
+
+
+//################################## mod ####################################
+// a modulation circuit to use with widget modulation and LFOs
+//#################################################################################
+
+mod(s, m) = s + (h - s) * max(0, m) + (s - l) * min(0, m)
+    with {
+        l = lowest(s);
+        h = highest(s);
+    };
