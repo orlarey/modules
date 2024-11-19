@@ -219,7 +219,7 @@ autopan(n) = vgroup("%n.APAN",  ["pan":mod -> pan(0)](["wave":1, "width":1 -> lf
 
 //----------------------------------------------------------------------------------
 // Generate random pitches (based on ondemand)
-key(n) = vgroup("%n.key", trig : ondemand(irnd(k1,k2) : loop(rn,ln) : ba.midikey2hz))
+key(n) = vgroup("%n.KEY", trig : ondemand(irnd(k1,k2) : loop(rn,ln) : ba.midikey2hz))
 	with {
 		random = +(12345) ~ *(1103515245);
 		noise = random / 2147483647;
@@ -231,11 +231,11 @@ key(n) = vgroup("%n.key", trig : ondemand(irnd(k1,k2) : loop(rn,ln) : ba.midikey
 				for(n) = 1-1@n;
 			};
 		// UI
-    	k1 = vslider("key1[style:knob]", 60, 0, 127, 1);
-		k2 = vslider("key2[style:knob]", 72, 0, 127, 1);
-		ln = vslider("len[style:knob]", 3, 2, 64, 1);
-		rn = vslider("renew[style:knob]", 11, 2, 127, 1);
-		trig = button("trig"): upfront;
+    	k1 = vslider("[1]key[style:knob]", 60, 0, 127, 1);
+		k2 = k1+vslider("[2]delta[style:knob]", 0, 0, 24, 1);
+		ln = vslider("[3]len[style:knob]", 3, 2, 64, 1);
+		rn = vslider("[4]renew[style:knob]", 11, 2, 127, 1);
+		trig = button("[5]trig"): upfront;
 	};
 
 
