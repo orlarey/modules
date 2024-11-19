@@ -49,12 +49,12 @@ with {
 
 
 //################################### adsr ########################################
-// ear(n): Exponential Attack Release envelop generator n
+// env(n): Exponential Attack Release envelop generator n
 //#################################################################################
 
-ear(n) = vgroup("%n.XAR", are(curv,natt,nrel)
+env(n) = vgroup("%n.ENV", are(curv,natt,nrel)
 with {
-	are(cu,na,nr) = upfront : \(mode,vc,trig).((trig>0) | (mode == 1) & (vc<(1-cu)), vc + (mode==1)*a*(1-vc) - (mode==0)*r*vc) ~(_,_) : !,_ : -(cu) : max(0) : /(1-2*cu) 
+	are(cu,na,nr) = button("[4]trig") : upfront : \(mode,vc,trig).((trig>0) | (mode == 1) & (vc<(1-cu)), vc + (mode==1)*a*(1-vc) - (mode==0)*r*vc) ~(_,_) : !,_ : -(cu) : max(0) : /(1-2*cu) 
     with { 
 		upfront(x) = x>x'; 
         a=t2a(natt,cu);  
@@ -217,6 +217,31 @@ with {
 
 autopan(n) = vgroup("%n.APAN",  ["pan":mod -> pan(0)](["wave":1, "width":1 -> lfo(0)]));
 
+//----------------------------------------------------------------------------------
+// Generate random pitches (based on ondemand)
+key(n) = vgroup("%n.key", trig : ondemand(irnd(k1,k2) : loop(rn,ln) : ba.midikey2hz))
+	with {
+		random = +(12345) ~ *(1103515245);
+		noise = random / 2147483647;
+		irnd(x,y) = x+(noise+1)/2*(y-x);
+		upfront(x) = x>x';
+		loop(n,m) = select2(every(n)|for(m)) ~ @(m-1) 
+			with {
+				every(n) = ((+(1):%(n))~_)' == 0; // 1 every n samples 0 otherwise
+				for(n) = 1-1@n;
+			};
+		// UI
+    	k1 = vslider("key1[style:knob]", 60, 0, 127, 1);
+		k2 = vslider("key2[style:knob]", 72, 0, 127, 1);
+		ln = vslider("len[style:knob]", 3, 2, 64, 1);
+		rn = vslider("renew[style:knob]", 11, 2, 127, 1);
+		trig = button("trig"): upfront;
+	};
+
+
+
+
+//----------------------------------------------------------------------------------
 
 //################################## mod ####################################
 // a modulation circuit to use with widget modulation and LFOs
