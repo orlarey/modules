@@ -217,8 +217,11 @@ with {
 
 autopan(n) = vgroup("%n.APAN",  ["pan":mod -> pan(0)](["wave":1, "width":1 -> lfo(0)]));
 
-//----------------------------------------------------------------------------------
+
+//#################################################################################
 // Generate random pitches (based on ondemand)
+//#################################################################################
+
 key(n) = vgroup("%n.KEY", trig : ondemand(irnd(k1,k2) : loop(rn,ln) : ba.midikey2hz))
 	with {
 		random = +(12345) ~ *(1103515245);
@@ -239,7 +242,86 @@ key(n) = vgroup("%n.KEY", trig : ondemand(irnd(k1,k2) : loop(rn,ln) : ba.midikey
 	};
 
 
+//#################################################################################
+// limiter: 1176_R4_mono
+//#################################################################################
 
+limiter(n) = vgroup("%n.LIM", *(gainin) : ba.bypass1(checkbox("bypass"), co.limiter_1176_R4_mono) : *(gainout))
+with {
+    gainin = vslider("input[style:knob]", 0, -70, 24, 0.1) : ba.db2linear;
+    gainout = vslider("output[style:knob]", 0, -70, 12, 0.1) : ba.db2linear;
+};
+
+
+//#################################################################################
+// reverb: Julius Smith's light version of `dm.zita_rev1` with only 2 UI elements.
+//#################################################################################
+
+reverb(n) = vgroup("%n.REV",(_ <: re.zita_rev1_stereo(rdel,f1,f2,t60dc,t60m,fsmax),_,_ : 
+    out_eq,_,_ : dry_wet : out_level :> _))
+with{
+    fsmax = 48000.0;  // highest sampling rate that will be used
+    rdel = 60;    
+    f1 = 200;
+    t60dc = 3;
+    t60m = 2;
+    f2 = 6000;
+    out_eq = pareq_stereo(eq1f,eq1l,eq1q) : pareq_stereo(eq2f,eq2l,eq2q);
+    pareq_stereo(eqf,eql,Q) = fi.peak_eq_rm(eql,eqf,tpbt), fi.peak_eq_rm(eql,eqf,tpbt)
+    with {
+        tpbt = wcT/sqrt(max(0,g)); // tan(PI*B/SR), B bw in Hz (Q^2 ~ g/4)
+        wcT = 2*ma.PI*eqf/ma.SR;  // peak frequency in rad/sample
+        g = ba.db2linear(eql); // peak gain
+    };
+    eq1f = 315;
+    eq1l = 0;
+    eq1q = 3;
+    eq2f = 1500;
+    eq2l = 0;
+    eq2q = 3;
+    dry_wet(x,y) = *(wet) + dry*x, *(wet) + dry*y 
+    with {
+        wet = 0.5*(drywet+1.0);
+        dry = 1.0-wet;
+    };
+    drywet = vslider("[1] Wet/Dry Mix [style:knob] [tooltip: Ratio of dry and wet signal. -1 = fully wet, +1 = fully dry]",
+        0,-1.0,1.0,0.01) : si.smoo;
+    gain = vslider("[2] Level [unit:dB] [style:knob] [tooltip: Output scale
+        factor]", -6, -70, 40, 0.1) : ba.db2linear : si.smoo;
+    out_level = *(gain),*(gain);
+};
+
+
+//################################## phaser ####################################
+// phaser: from Julius Smith's phaser2_demo with a simplified UI
+//#################################################################################
+
+
+phaser(n) = vgroup("%n.PHASER", ba.bypass2(pbp,phaser2_stereo_demo))
+with{
+
+    pbp = checkbox("[4] Bypass    [tooltip: When this is checked, the phaser has no effect]");
+    invert = 0;
+    vibr = 1; 
+
+    phaser2_stereo_demo = *(level),*(level) :
+        pf.phaser2_stereo(Notches,width,frqmin,fratio,frqmax,speed,mdepth,fb,invert);
+
+    Notches = 2; // Compile-time parameter: 2 is typical for analog phaser stomp-boxes
+
+    speed  = hslider("[1] Speed [unit:Hz] [style:knob]", 0.5, 0, 10, 0.001);
+    depth = hslider("[2] Notch Depth (Intensity) [style:knob]", 1, 0, 1, 0.001);
+    fb  = hslider("[3] Feedback [style:knob]", 0, -0.999, 0.999, 0.001);
+
+    width  = 1000; 
+    frqmin = 100; 
+    frqmax = 800; 
+    fratio = 1.5; 
+
+    level  = hslider("[3] Output[style:knob][unit:dB]", 0, -60, 10, 0.1) : ba.db2linear;
+
+    mdepth = select2(vibr,depth,2); // Improve "ease of use"
+};
 
 //----------------------------------------------------------------------------------
 
@@ -252,3 +334,5 @@ mod(s, m) = s + (h - s) * max(0, m) + (s - l) * min(0, m)
         l = lowest(s);
         h = highest(s);
     };
+
+
